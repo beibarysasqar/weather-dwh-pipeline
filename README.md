@@ -39,7 +39,13 @@ cp .env.example .env
 
 ## Run the pipeline
 
-_TODO (next stages)._
+```bash
+python -m src.pipeline
+```
+
+Steps: extract + clean (3 sources) -> load `staging` -> MERGE into `mart` -> check row counts.
+Every step logs row counts. The pipeline is idempotent: a second run inserts 0 rows
+(existing rows are updated by `MERGE`). Settings (DB path, date range) come from `.env`.
 
 ## Run with Docker
 
@@ -53,4 +59,33 @@ pytest
 
 ## Schema
 
-_TODO (next stages)._
+DuckDB file `warehouse.duckdb`, two schemas:
+
+- `staging` - `cities`, `countries`, `weather`: cleaned source data, fully replaced on every run.
+- `mart` - star schema, updated with `MERGE` (SQL in `sql/merge_*.sql`):
+
+```
+                    +-------------------+
+                    |   dim_country     |
+                    |-------------------|
+                    | country_code (PK) |
+                    | country_name      |
+                    | region            |
+                    | population        |
+                    +---------+---------+
+                              |
++-------------------+  +------+---------------+  +-------------------+
+|    dim_city       |  |    fact_weather      |  |    dim_date       |
+|-------------------|  |----------------------|  |-------------------|
+| city_id (PK)      +--+ city_id    (PK)      +--+ date_key (PK)     |
+| city              |  | date_key   (PK)      |  | full_date         |
+| country_code      |  | country_code         |  | year, quarter     |
+| lat, lon          |  | temp_max, temp_min   |  | month, month_name |
++-------------------+  | precipitation        |  | day, day_of_week  |
+                       +----------------------+  | is_weekend        |
+                                                 +-------------------+
+```
+
+- Grain of `fact_weather`: one row per city per day.
+- `city_id` is a surrogate key (sequence); `date_key` is `yyyymmdd` (e.g. `20240106`).
+- No FOREIGN KEY constraints (DuckDB restricts updates on referenced rows); keys are matched in MERGE.
