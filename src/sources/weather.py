@@ -1,9 +1,14 @@
 """Weather source: daily weather from the Open-Meteo Archive API."""
+import logging
+import time
+
 import pandas as pd
 import requests
 
 from src import config
 from src.sources.base import BaseSource
+
+logger = logging.getLogger(__name__)
 
 DAILY_VARIABLES = "temperature_2m_max,temperature_2m_min,precipitation_sum"
 
@@ -35,10 +40,19 @@ class WeatherApiSource(BaseSource):
             "daily": DAILY_VARIABLES,
             "timezone": "UTC",
         }
-        response = requests.get(
-            config.WEATHER_API_URL, params=params, timeout=config.REQUEST_TIMEOUT_SECONDS
-        )
-        response.raise_for_status()
+        # First request + up to RATE_LIMIT_MAX_RETRIES retries after a 429 answer.
+        for retry in range(config.RATE_LIMIT_MAX_RETRIES + 1):
+            response = requests.get(
+                config.WEATHER_API_URL, params=params, timeout=config.REQUEST_TIMEOUT_SECONDS
+            )
+            if response.status_code != 429 or retry == config.RATE_LIMIT_MAX_RETRIES:
+                break
+            logger.warning(
+                "weather: rate limit hit (429), waiting %d s (retry %d of %d)",
+                config.RATE_LIMIT_WAIT_SECONDS, retry + 1, config.RATE_LIMIT_MAX_RETRIES,
+            )
+            time.sleep(config.RATE_LIMIT_WAIT_SECONDS)
+        response.raise_for_status()  # still 429 after all retries, or another error
         return response.json()["daily"]
 
     def extract(self) -> pd.DataFrame:

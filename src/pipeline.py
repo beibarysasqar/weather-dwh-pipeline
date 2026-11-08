@@ -34,9 +34,9 @@ def save_csv(df: pd.DataFrame, path: Path) -> None:
 
 
 def weather_window(end_date: str, days: int = 14) -> tuple[str, str]:
-    """Return (start, end) dates covering the last `days` days up to end_date."""
+    """Return (start, end) covering exactly `days` dates, end_date included."""
     end = date.fromisoformat(end_date)
-    return (end - timedelta(days=days)).isoformat(), end.isoformat()
+    return (end - timedelta(days=days - 1)).isoformat(), end.isoformat()
 
 
 def extract(start_date: str, end_date: str, work_dir: Path = config.WORK_DIR) -> None:

@@ -5,6 +5,7 @@ from unittest.mock import MagicMock, patch
 
 import pandas as pd
 import pytest
+import requests
 
 from src.sources.base import BaseSource
 from src.sources.cities import CitiesCsvSource
@@ -12,9 +13,10 @@ from src.sources.countries import CountriesApiSource
 from src.sources.weather import WeatherApiSource
 
 
-def fake_response(body) -> MagicMock:
+def fake_response(body, status_code: int = 200) -> MagicMock:
     """Build a fake requests.Response that returns the given JSON body."""
     response = MagicMock()
+    response.status_code = status_code
     response.json.return_value = body
     return response
 
@@ -99,6 +101,35 @@ def test_weather_extract_builds_one_row_per_day(mock_get):
         "city", "country_code", "date", "temp_max", "temp_min", "precipitation"
     ]
     assert mock_get.call_args.kwargs["params"]["latitude"] == 51.5
+
+
+@patch("src.sources.weather.time.sleep")
+@patch("src.sources.weather.requests.get")
+def test_weather_retries_after_rate_limit(mock_get, mock_sleep, caplog):
+    rate_limited = fake_response({"error": True, "reason": "limit exceeded"}, status_code=429)
+    mock_get.side_effect = [rate_limited, fake_response(WEATHER_BODY)]
+    caplog.set_level(logging.WARNING)
+
+    raw = make_weather_source().extract()
+
+    assert len(raw) == 3
+    assert mock_get.call_count == 2
+    mock_sleep.assert_called_once()
+    assert "rate limit hit (429)" in caplog.text
+
+
+@patch("src.sources.weather.time.sleep")
+@patch("src.sources.weather.requests.get")
+def test_weather_gives_up_after_max_retries(mock_get, mock_sleep):
+    rate_limited = fake_response({"error": True}, status_code=429)
+    rate_limited.raise_for_status.side_effect = requests.HTTPError("429")
+    mock_get.return_value = rate_limited
+
+    with pytest.raises(requests.HTTPError):
+        make_weather_source().extract()
+
+    assert mock_get.call_count == 4  # first request + 3 retries
+    assert mock_sleep.call_count == 3  # no useless wait after the last try
 
 
 @patch("src.sources.weather.requests.get")

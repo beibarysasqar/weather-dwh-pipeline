@@ -31,8 +31,8 @@ def run_sql_file(con: duckdb.DuckDBPyConnection, file_name: str) -> duckdb.DuckD
 
 
 def count_rows(con: duckdb.DuckDBPyConnection, table: str) -> int:
-    """Return the number of rows in a table."""
-    return con.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0]
+    """Return the number of rows in a table (DuckDB relational API, no SQL string)."""
+    return con.table(table).count("*").fetchone()[0]
 
 
 def create_mart(con: duckdb.DuckDBPyConnection) -> None:

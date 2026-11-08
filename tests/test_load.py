@@ -116,5 +116,5 @@ def test_transform_keeps_namibia_code_through_csv(tmp_path):
     assert list(clean["country_code"]) == ["GB", "NA"]
 
 
-def test_weather_window_covers_last_days():
-    assert weather_window("2024-01-15", 14) == ("2024-01-01", "2024-01-15")
+def test_weather_window_covers_exactly_14_days():
+    assert weather_window("2024-01-15", 14) == ("2024-01-02", "2024-01-15")

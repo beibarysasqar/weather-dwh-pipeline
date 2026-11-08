@@ -75,8 +75,9 @@ cp .env.example .env
 python -m src.pipeline
 ```
 
-Tip: for a quick run use a short date range (a full year for 113 cities may hit
-Open-Meteo's per-minute limit):
+A full year for 113 cities takes about 1-2 minutes. Open-Meteo may answer `429` (per-minute
+limit); the weather source then waits 60 s and retries (up to 3 times), and logs a warning.
+For a quick run use a short date range:
 
 ```bash
 WEATHER_START_DATE=2024-01-01 WEATHER_END_DATE=2024-01-07 python -m src.pipeline
@@ -87,7 +88,7 @@ Run it twice: the second run logs `inserted 0` for every mart table.
 ## Run with Docker (Airflow)
 
 One container runs Airflow 3.3.2 in `standalone` mode. The DAG `weather_weekly`
-runs every week and loads the last 14 days of weather.
+runs every week and loads the last 14 days of weather (run date included).
 The DuckDB file is stored on the host in `./warehouse/warehouse.duckdb`.
 
 ```bash
@@ -112,12 +113,17 @@ UI: http://localhost:8080 (no login, local demo only). Task logs are in the UI
 ```bash
 pytest -v
 ruff check src tests dags
+
+# all tests including the DAG test (needs Airflow, so it runs in the container):
+docker compose exec -w /opt/airflow/project airflow pytest -v -p no:cacheprovider
 ```
 
-15 fast tests, no real network calls (`requests.get` is mocked). They cover:
+18 fast tests, no real network calls (`requests.get` is mocked). They cover:
 duplicate and malformed rows removed, row-count logging, column schema, World Bank error
-response, date dimension values, MERGE twice gives the same row counts, changed values are
-updated, full pipeline twice is idempotent, "NA" (Namibia) survives CSV round-trips.
+response, retry after `429`, date dimension values, MERGE twice gives the same row counts,
+changed values are updated, full pipeline twice is idempotent, "NA" (Namibia) survives CSV
+round-trips, DAG loads with tasks in the right order. The DAG test is skipped where Airflow
+is not installed (local venv, CI).
 
 GitHub Actions (`.github/workflows/ci.yml`) runs lint + tests on every push and pull request,
 every Monday at 06:00 UTC, and manually via "Run workflow". No secrets needed.
@@ -176,4 +182,7 @@ ORDER BY co.region, d.month;
 - **No FOREIGN KEY constraints:** DuckDB restricts updates on rows referenced by a foreign key;
   keys are matched in the MERGE statements instead.
 - **`max_active_runs=1`:** DuckDB allows only one writer, so DAG runs never overlap.
-- **SQL in files:** all SQL lives in `sql/`; Python only runs the files and counts rows.
+- **SQL in files:** all SQL lives in `sql/`; Python only runs the files and counts rows
+  (row counts use the DuckDB relational API, not an SQL string).
+- **Retry on `429`:** Open-Meteo has a per-minute request limit; waiting 60 s and retrying is
+  simpler than throttling every request.

@@ -23,3 +23,6 @@ WEATHER_API_URL = "https://archive-api.open-meteo.com/v1/archive"
 COUNTRIES_API_URL = "https://api.worldbank.org/v2/country"
 POPULATION_API_URL = "https://api.worldbank.org/v2/country/all/indicator/SP.POP.TOTL"
 REQUEST_TIMEOUT_SECONDS = 60
+# Open-Meteo answers 429 when the per-minute limit is hit; the limit resets after a minute.
+RATE_LIMIT_WAIT_SECONDS = 60
+RATE_LIMIT_MAX_RETRIES = 3
