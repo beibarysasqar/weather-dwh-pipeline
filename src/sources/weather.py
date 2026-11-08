@@ -17,11 +17,11 @@ class WeatherApiSource(BaseSource):
 
     def __init__(
         self,
-        cities: pd.DataFrame,
+        cities: pd.DataFrame | None = None,  # only needed by extract()
         start_date: str = config.WEATHER_START_DATE,
         end_date: str = config.WEATHER_END_DATE,
     ) -> None:
-        self.cities = cities
+        self.cities = cities if cities is not None else pd.DataFrame()
         self.start_date = start_date
         self.end_date = end_date
 

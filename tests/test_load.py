@@ -6,7 +6,10 @@ import pandas as pd
 import pytest
 
 from src.load import check_counts, create_mart, get_connection, load_staging, merge_mart
-from src.pipeline import run_pipeline
+from src.pipeline import run_pipeline, transform, weather_window
+from src.sources.cities import CitiesCsvSource
+from src.sources.countries import CountriesApiSource
+from src.sources.weather import WeatherApiSource
 
 CITIES = pd.DataFrame(
     [
@@ -89,12 +92,29 @@ def test_fact_table_has_star_schema_columns(con):
     ]
 
 
-@patch("src.pipeline.extract_and_clean", return_value=(CITIES, COUNTRIES, WEATHER))
-def test_pipeline_twice_gives_same_counts(mock_extract, tmp_path):
+@patch.object(WeatherApiSource, "extract", return_value=WEATHER)
+@patch.object(CountriesApiSource, "extract", return_value=COUNTRIES)
+@patch.object(CitiesCsvSource, "extract", return_value=CITIES)
+def test_pipeline_twice_gives_same_counts(mock_cities, mock_countries, mock_weather, tmp_path):
     db_path = tmp_path / "warehouse.duckdb"
 
-    first = run_pipeline(db_path)
-    second = run_pipeline(db_path)
+    first = run_pipeline("2024-01-05", "2024-01-06", db_path, tmp_path)
+    second = run_pipeline("2024-01-05", "2024-01-06", db_path, tmp_path)
 
     assert first == second
     assert second["mart.fact_weather"] == 4
+
+
+def test_transform_keeps_namibia_code_through_csv(tmp_path):
+    CITIES.to_csv(tmp_path / "raw_cities.csv", index=False)
+    COUNTRIES.to_csv(tmp_path / "raw_countries.csv", index=False)
+    WEATHER.to_csv(tmp_path / "raw_weather.csv", index=False)
+
+    transform(tmp_path)
+
+    clean = pd.read_csv(tmp_path / "clean_countries.csv", keep_default_na=False)
+    assert list(clean["country_code"]) == ["GB", "NA"]
+
+
+def test_weather_window_covers_last_days():
+    assert weather_window("2024-01-15", 14) == ("2024-01-01", "2024-01-15")

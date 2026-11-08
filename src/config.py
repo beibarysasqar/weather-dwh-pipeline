@@ -10,6 +10,7 @@ load_dotenv(PROJECT_ROOT / ".env")
 # Paths (relative paths are resolved from the project root)
 DUCKDB_PATH = PROJECT_ROOT / os.getenv("DUCKDB_PATH", "warehouse.duckdb")
 CITIES_CSV_PATH = PROJECT_ROOT / os.getenv("CITIES_CSV_PATH", "data/cities.csv")
+WORK_DIR = PROJECT_ROOT / os.getenv("WORK_DIR", "data/work")  # CSV files passed between steps
 
 # Weather date range (YYYY-MM-DD)
 WEATHER_START_DATE = os.getenv("WEATHER_START_DATE", "2024-01-01")

@@ -1,0 +1,13 @@
+.git
+.idea
+.venv
+.python
+.uv-cache
+.env
+.pytest_cache
+.ruff_cache
+**/__pycache__
+warehouse
+*.duckdb
+*.duckdb.wal
+data/work

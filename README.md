@@ -43,13 +43,37 @@ cp .env.example .env
 python -m src.pipeline
 ```
 
-Steps: extract + clean (3 sources) -> load `staging` -> MERGE into `mart` -> check row counts.
+Steps (functions in `src/pipeline.py`, also used as Airflow tasks):
+`extract` -> `transform` -> `load_staging` -> `merge_mart` -> `check_counts`.
+Steps pass data through CSV files in `data/work/` (`raw_*.csv`, `clean_*.csv`).
 Every step logs row counts. The pipeline is idempotent: a second run inserts 0 rows
 (existing rows are updated by `MERGE`). Settings (DB path, date range) come from `.env`.
 
-## Run with Docker
+## Run with Docker (Airflow)
 
-_TODO (next stages)._
+One container runs Airflow 3.3.2 in `standalone` mode. The DAG `weather_weekly`
+(`dags/weather_dag.py`) runs every week and loads the last 14 days of weather
+(the overlap with the previous run is safe: MERGE is idempotent).
+The DuckDB file is stored on the host in `./warehouse/warehouse.duckdb`.
+
+```bash
+docker compose up -d --build                                   # build image and start Airflow
+docker compose exec airflow airflow dags list                  # DAG weather_weekly is visible
+docker compose exec airflow airflow dags unpause weather_weekly
+docker compose exec airflow airflow dags trigger weather_weekly
+docker compose exec airflow airflow dags list-runs weather_weekly
+docker compose logs -f airflow                                 # Airflow process logs
+docker compose down                                            # stop
+```
+
+UI: http://localhost:8080 (no login, local demo only). Task logs are in the UI
+(DAG -> run -> task -> Logs) or in the container under `/opt/airflow/logs/`.
+
+Notes:
+- Unpausing the DAG immediately creates one scheduled run for the latest week.
+- `max_active_runs=1`: DuckDB allows only one writer, so runs never overlap.
+- The Airflow metadata DB (SQLite) lives inside the container; `docker compose down` resets
+  run history (the DuckDB file in `./warehouse` stays).
 
 ## Run tests
 
