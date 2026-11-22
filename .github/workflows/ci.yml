@@ -1,0 +1,32 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+  # weekly run shows if the pinned dependencies still install on a fresh runner
+  schedule:
+    - cron: "0 6 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Lint
+        run: ruff check src tests dags
+
+      - name: Run tests
+        run: pytest -v

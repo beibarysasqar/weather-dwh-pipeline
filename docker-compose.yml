@@ -1,0 +1,16 @@
+services:
+  airflow:
+    build: .
+    # standalone = api-server, scheduler, dag-processor and triggerer in one container
+    command: standalone
+    ports:
+      - "8080:8080"
+    environment:
+      AIRFLOW__CORE__DAGS_FOLDER: /opt/airflow/project/dags
+      AIRFLOW__CORE__LOAD_EXAMPLES: "false"
+      # no login, local demo only
+      AIRFLOW__CORE__SIMPLE_AUTH_MANAGER_ALL_ADMINS: "true"
+      DUCKDB_PATH: /opt/airflow/warehouse/warehouse.duckdb
+    volumes:
+      # the DuckDB file survives container restarts
+      - ./warehouse:/opt/airflow/warehouse
