@@ -1,5 +1,7 @@
 # Weather Data Warehouse: ETL pipeline with DuckDB and Airflow
 
+[![CI](https://github.com/beibarysasqar/weather-dwh-pipeline/actions/workflows/ci.yml/badge.svg)](https://github.com/beibarysasqar/weather-dwh-pipeline/actions/workflows/ci.yml)
+
 Loads daily weather for 20 cities and country data from two public APIs, cleans it with pandas
 and merges it into a DuckDB star schema. Airflow runs it weekly in Docker; a failing test stops the run.
 
