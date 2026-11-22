@@ -1,4 +1,3 @@
--- Insert new countries, update name/region/population of existing ones.
 MERGE INTO mart.dim_country AS t
 USING staging.countries AS s
 ON t.country_code = s.country_code

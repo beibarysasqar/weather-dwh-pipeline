@@ -7,21 +7,14 @@ logger = logging.getLogger(__name__)
 
 class BaseSource:
     name = "base"
-    key_columns: list[str] = []  # must be unique per row
-    required_columns: list[str] = []  # must not be null
+    key_columns: list[str] = []
+    required_columns: list[str] = []
 
     def extract(self) -> pd.DataFrame:
         raise NotImplementedError
 
     def clean(self, df: pd.DataFrame) -> pd.DataFrame:
         raise NotImplementedError
-
-    def run(self) -> pd.DataFrame:
-        raw = self.extract()
-        logger.info("%s: extracted %d rows", self.name, len(raw))
-        cleaned = self.clean(raw)
-        logger.info("%s: cleaned %d rows", self.name, len(cleaned))
-        return cleaned
 
     def remove_bad_rows(self, df: pd.DataFrame, invalid: pd.Series) -> pd.DataFrame:
         before = len(df)

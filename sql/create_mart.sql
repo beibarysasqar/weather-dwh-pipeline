@@ -6,19 +6,19 @@ CREATE SCHEMA IF NOT EXISTS mart;
 CREATE SEQUENCE IF NOT EXISTS mart.seq_city_id START 1;
 
 CREATE TABLE IF NOT EXISTS mart.dim_country (
-    country_code VARCHAR PRIMARY KEY, -- ISO 3166-1 alpha-2
+    country_code VARCHAR PRIMARY KEY,
     country_name VARCHAR NOT NULL,
     region       VARCHAR NOT NULL,
     population   BIGINT
 );
 
 CREATE TABLE IF NOT EXISTS mart.dim_city (
-    city_id      INTEGER PRIMARY KEY DEFAULT nextval('mart.seq_city_id'), -- surrogate key
+    city_id      INTEGER PRIMARY KEY DEFAULT nextval('mart.seq_city_id'),
     city         VARCHAR NOT NULL,
     country_code VARCHAR NOT NULL,
     lat          DOUBLE NOT NULL,
     lon          DOUBLE NOT NULL,
-    UNIQUE (city, country_code) -- natural key
+    UNIQUE (city, country_code)
 );
 
 CREATE TABLE IF NOT EXISTS mart.dim_date (
@@ -34,9 +34,9 @@ CREATE TABLE IF NOT EXISTS mart.dim_date (
 );
 
 CREATE TABLE IF NOT EXISTS mart.fact_weather (
-    city_id       INTEGER NOT NULL, -- -> dim_city
-    country_code  VARCHAR NOT NULL, -- -> dim_country
-    date_key      INTEGER NOT NULL, -- -> dim_date
+    city_id       INTEGER NOT NULL,
+    country_code  VARCHAR NOT NULL,
+    date_key      INTEGER NOT NULL,
     temp_max      DOUBLE,
     temp_min      DOUBLE,
     precipitation DOUBLE,

@@ -71,7 +71,7 @@ def test_weather_clean_removes_malformed_and_duplicate_rows(mock_get):
     mock_get.return_value = fake_response(WEATHER_BODY)
     source = london_weather_source()
     raw = source.extract()
-    raw = pd.concat([raw, raw.iloc[[0]]], ignore_index=True)  # add a duplicate
+    raw = pd.concat([raw, raw.iloc[[0]]], ignore_index=True)
 
     result = source.clean(raw)
 

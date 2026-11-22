@@ -35,11 +35,17 @@ def weather_window(end_date: str, days: int = 14) -> tuple[str, str]:
 
 def extract(start_date: str, end_date: str, work_dir: Path = config.WORK_DIR) -> None:
     cities_source = CitiesCsvSource()
-    save_csv(cities_source.extract(), work_dir / "raw_cities.csv")
-    save_csv(CountriesApiSource().extract(), work_dir / "raw_countries.csv")
+    cities = cities_source.extract()
     # The weather API needs valid coordinates, so it uses the cleaned city list.
-    weather = WeatherApiSource(cities_source.run(), start_date, end_date).extract()
-    save_csv(weather, work_dir / "raw_weather.csv")
+    weather_source = WeatherApiSource(cities_source.clean(cities), start_date, end_date)
+    raw = {
+        "cities": cities,
+        "countries": CountriesApiSource().extract(),
+        "weather": weather_source.extract(),
+    }
+    for name, df in raw.items():
+        logger.info("%s: extracted %d rows", name, len(df))
+        save_csv(df, work_dir / f"raw_{name}.csv")
 
 
 def extract_recent(end_date: str, days: int = 14, work_dir: Path = config.WORK_DIR) -> None:
